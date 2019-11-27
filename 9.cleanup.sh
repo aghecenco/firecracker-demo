@@ -3,11 +3,10 @@
 COUNT=`ls /sys/class/net/ | wc -l`
 
 killall iperf3
-killall firecracker
+killall firecracker_snapshotting_wip
 
-for ((i=0; i<COUNT; i++))
-do
-  ip link del fc-$i-tap0 2> /dev/null &
+for ((i=0; i<COUNT; i++)); do
+    ip link del fc-$i-tap0 2> /dev/null &
 done
 
 rm -rf output/*

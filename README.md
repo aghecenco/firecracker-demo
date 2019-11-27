@@ -2,13 +2,12 @@
 
 ## Disclaimer
 
-This demo showcases Firecracker's agility and high-density capabiliies.
-**It's been run on an EC2 I3.metal host (the defaults start 4000 microVMs)
+This demo showcases Firecracker's snapshotting capability.
+**It's been run on an EC2 I3.metal host (the defaults start 1000 microVMs)
 with an Ubuntu and an Amazon Linux 2 host OS, from an Ubuntu client.**
 
-Deviations from this setup will probably lead to issues and/or sub-par performance.
-If you want to help us support the demo on more platforms...we take
-pull requests :)
+Deviations from this setup will probably lead to issues and/or sub-par
+performance.
 
 ## Step-by-Step Instructions
 
@@ -27,12 +26,16 @@ python3 microvm-tiles.py
 
 will control the rest of the demo.
 
-Raise the maximum processes limit.
+Raise the maximum processes and files limits.
+
+# Raise the limits on open files and processes
 
 ```bash
 sudo tee -a >> /etc/security/limits.conf <<EOL
 ec2-user soft nproc 16384
 ec2-user hard nproc 16384
+ec2-user soft nofile 819200
+ec2-user hard nofile 819200
 EOL
 ```
 
@@ -50,24 +53,24 @@ sudo chmod 777 /dev/kvm
 chmod 400 xenial.rootfs.id_rsa
 ```
 
-Create 4000 TAPs, configure networking for them and start 4k `iperf3` servers
+Create 1000 TAPs, configure networking for them and start 1k `iperf3` servers
 each bound to their respective TAP.
 
 ```bash
-sudo ./0.initial-setup.sh 4000
+sudo ./0.initial-setup.sh 1000
 ```
 
-#### Start 4000 Firecracker microVMs
+#### Start 1000 Firecracker microVMs
 
-Use 6 parallel threads to configure and start **4000** microVMs. Each
-thread will get an equal slice of the 4k total and sequentially configure
+Use 6 parallel threads to configure and start **1000** microVMs. Each
+thread will get an equal slice of the 1k total and sequentially configure
 and issue the start command for each microVM.
 
 The script will report **total duration** as well as **mutation rate**.
 
 ```bash
-# start a total of 4k uVMs from 6 parallel threads
-./parallel-start-many.sh 0 4000 6
+# start a total of 1k uVMs from 6 parallel threads
+./parallel-start-many.sh 0 1000 6
 # ... wait for it ... should take around 60 seconds ... watch the heatmap
 ```
 
@@ -81,7 +84,7 @@ to random lighting of the heatmap.
 
 #### Pick a microVM and play with it
 
-Pick a number `0 <= ID < 4000`. For this example `42` was chosen.
+Pick a number `0 <= ID < 1000`. For this example `42` was chosen.
 
 ```bash
 ID="42"
@@ -133,12 +136,54 @@ Connecting to host 169.254.0.170, port 5201
 iperf Done.
 ```
 
-#### Plot the 4000 Firecracker microVMs boot times
+#### Snapshot the 1000 microVMs
 
-To plot the boot times, on your local machine or any non-headless setup:
+While the microVMs are running, save a snapshot of each. This will also
+terminate them.
+
+```bash
+./parallel-snapshot-many 0 1000 6
+```
+
+The snapshots are saved in the `snapshots` directory. For each microVM, there
+are 2 files: one containing the serialized microVM state, and one for the
+guest's memory. They are called `fc$ID.bin` and `fc$ID.mem` respectively.
+
+The files are small in size, with little state being saved, and only the
+memory that the guest has actually dirtied:
+
+```bash
+ls -lh snapshots/fc42.bin 
+-rw-rw-r-- 1 ec2-user ec2-user 16K Dec  3 19:18 snapshots/fc42.bin
+du -sh snapshots/fc42.bin 
+16K	snapshots/fc42.bin
+
+ls -lh snapshots/fc42.mem 
+-rw-rw-r-- 1 ec2-user ec2-user 128M Dec  3 19:19 snapshots/fc42.mem
+du -sh snapshots/fc42.mem
+37M	snapshots/fc42.mem
+```
+
+#### Resume the 4000 microVMs
+
+Keep the heatmap in view to observe how the microVMs waking up no longer form
+"snakes" - because each of them was snapshotted either while doing traffic, in
+which case it will wake up and light its tile with the remaining traffic, or
+during a `sleep` invocation. In this case, the tile stays unlit until it
+finishes sleeping.
+
+```bash
+./parallel-resume-many 0 1000 6
+```
+
+You can redo the experiment that logs in to a random microVM and play with it.
+
+#### Plot the 1000 Firecracker microVMs boot and resume times
+
+To plot the boot and resume times, on your local machine or any non-headless
+setup:
 
 ```bash
 scp -i <identity-key> ec2-user@<i3.metal-ip>:firecracker-demo/{data.log,gnuplot.script} .
-gnuplot gnuplot.script
-xdg-open boot-time.png  # on Ubuntu. For other distros just use your default .png viewer.
+gnuplot gnuplot.script --persist
 ```

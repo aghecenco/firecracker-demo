@@ -1,31 +1,34 @@
-set term png size 1920,1080
-set output "boot-time.png"
+#set term png size 1920,1080
+#set output "boot-time.png"
 
-set key left bottom
+set key right top
 
-stats "data.log" u 1:3 nooutput
+stats "data.log" u 1:2 nooutput
 
 set xrange [0:STATS_max_x]
 set yrange [0:STATS_max_y+50]
 
-set label 1 gprintf("Maximum = %g ms", STATS_max_y) at STATS_pos_max_y-30, STATS_max_y+18
+set label 1 gprintf("Maximum boot = %g ms", STATS_max_y) at STATS_pos_max_y, STATS_max_y+18 front
 set arrow from STATS_pos_max_y, STATS_max_y+15 to STATS_pos_max_y, STATS_max_y lc rgb 'black'
 
-set label 2 gprintf("Minimum = %g ms", STATS_min_y) at STATS_pos_min_y-25, STATS_min_y-80
-set arrow from STATS_pos_min_y, STATS_min_y-77 to STATS_pos_min_y, STATS_min_y lc rgb 'black'
+set label 2 gprintf("Minimum boot = %g ms", STATS_min_y) at STATS_pos_min_y-2, STATS_min_y-30 front
+set arrow from STATS_pos_min_y, STATS_min_y-30 to STATS_pos_min_y, STATS_min_y lc rgb 'black'
 
-f(x) = mean_y
-fit f(x) 'data.log' u 1:3 via mean_y
+BOOT_max_y=STATS_max_y
+BOOT_min_y=STATS_min_y
 
-stddev_y = sqrt(FIT_WSSR / (FIT_NDF + 1))
+stats "data.log" u 1:3 nooutput
 
-set label 3 gprintf("'Total' mean avg = %g ms", mean_y) at STATS_max_x/2-50, 100
-set label 4 gprintf("Standard deviation = %g", stddev_y) at STATS_max_x/2-50, 80
+set label 5 gprintf("Maximum resume = %g ms", STATS_max_y) at STATS_pos_max_y, STATS_max_y+32 front
+set arrow from STATS_pos_max_y, STATS_max_y to STATS_pos_max_y, STATS_max_y+30 lc rgb 'black'
 
-plot mean_y-stddev_y with filledcurves y1=mean_y lt 1 lc rgb "#b3ffb3" notitle, \
-     mean_y+stddev_y with filledcurves y1=mean_y lt 1 lc rgb "#b3ffb3" title "Standard deviation", \
-     mean_y w l lt 1 lc rgb "#ffff66" lw 3 title "Mean average", \
-     "data.log" u 1:3 title 'Guest Boot' w p lc rgb 'orange' pt 14 ps 1, \
-     STATS_min_y w l lc rgb 'blue' notitle, \
-     STATS_max_y w l lc rgb 'blue' notitle
+set label 6 gprintf("Minimum resume = %g ms", STATS_min_y) at STATS_pos_min_y-2, STATS_min_y+22 front
+set arrow from STATS_pos_min_y, STATS_min_y to STATS_pos_min_y, STATS_min_y+20 lc rgb 'black'
+
+plot "data.log" u 1:2 title 'Guest Boot' w p lc rgb 'orange' pt 14 ps 1, \
+    "data.log" u 1:3 title 'Snapshot Resume' w p lc rgb 'green' pt 14 ps 1, \
+    BOOT_min_y w l lc rgb 'blue' notitle, \
+    BOOT_max_y w l lc rgb 'blue' notitle, \
+    STATS_min_y w l lc rgb 'purple' notitle, \
+    STATS_max_y w l lc rgb 'purple' notitle
 

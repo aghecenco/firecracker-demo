@@ -1,6 +1,6 @@
 #!/bin/bash
 
-COUNT="${1:-4000}" # Default to 4000
+COUNT="${1:-1000}" # Default to 1000
 
 RES=scripts
 

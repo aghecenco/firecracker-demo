@@ -97,4 +97,3 @@ def render_microvms(stdscr):
 
 # Run the curses "rendering" loop in the terminal, and clean up after.
 curses.wrapper(render_microvms)
-
